@@ -1,8 +1,30 @@
 provider "aws" {
-    region = "us-east-1"  # Set your desired AWS region
+  region = "ap-northeast-1"
 }
 
-resource "aws_instance" "example" {
-    ami           = "ami-0c55b159cbfafe1f0"  # Specify an appropriate AMI ID
-    instance_type = "t2.micro"
+resource "aws_instance" "t2_micro" {
+  ami           = "ami-0126975fb247bf2e7"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "Terraform-T2-Micro"
+  }
 }
+
+resource "aws_instance" "t2_large" {
+  ami           = "ami-0126975fb247bf2e7"
+  instance_type = "t2.large"
+
+  tags = {
+    Name = "Terraform-T2-Large"
+  }
+}
+
+resource "aws_instance" "t3_large" {
+  ami           = "ami-0126975fb247bf2e7"
+  instance_type = "t3.large"
+
+  tags = {
+    Name = "Terraform-T3-Large"
+  }
+}}
