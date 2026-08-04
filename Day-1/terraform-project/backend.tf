@@ -4,6 +4,7 @@ terraform {
     key          = "dev/terraform.tfstate"
     region       = "ap-northeast-1"
     encrypt      = true
+    use_lockfile = true
 
     # Terraform v1.10+ lockfile support
     use_lockfile = true
