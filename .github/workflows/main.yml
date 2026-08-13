@@ -1,0 +1,180 @@
+name: Cursor CLI - Ubuntu Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_environment:
+        description: "Deployment environment"
+        required: true
+        type: choice
+        options:
+          - pilot
+          - production
+
+      target_label:
+        description: "Runner label"
+        required: true
+        default: "ubuntu-cursor"
+
+      rollout_size:
+        description: "Maximum parallel installations"
+        required: true
+        default: "25"
+
+permissions:
+  contents: read
+
+jobs:
+
+  install-cursor-cli:
+
+    name: Install Cursor CLI
+
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - ${{ inputs.target_label }}
+
+    strategy:
+      fail-fast: false
+
+      max-parallel: 25
+
+      matrix:
+        target:
+          - ubuntu-001
+          - ubuntu-002
+          - ubuntu-003
+          - ubuntu-004
+          - ubuntu-005
+
+    steps:
+
+      # -------------------------------------------------------
+      # 1. Display target information
+      # -------------------------------------------------------
+
+      - name: Display target information
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "============================================"
+          echo "Cursor CLI Deployment"
+          echo "============================================"
+
+          echo "Target: ${{ matrix.target }}"
+          echo "Runner: ${RUNNER_NAME}"
+          echo "Hostname: $(hostname)"
+          echo "Architecture: $(uname -m)"
+
+          echo ""
+          echo "Operating System:"
+          cat /etc/os-release
+
+      # -------------------------------------------------------
+      # 2. Download installation script
+      # -------------------------------------------------------
+
+      - name: Checkout deployment repository
+        uses: actions/checkout@v6
+
+      # -------------------------------------------------------
+      # 3. Make installer executable
+      # -------------------------------------------------------
+
+      - name: Prepare installer
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          chmod +x scripts/install-cursor-cli.sh
+
+      # -------------------------------------------------------
+      # 4. Install Cursor CLI
+      # -------------------------------------------------------
+
+      - name: Install Cursor CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Installing Cursor CLI..."
+
+          ./scripts/install-cursor-cli.sh
+
+      # -------------------------------------------------------
+      # 5. Validate installation
+      # -------------------------------------------------------
+
+      - name: Validate Cursor CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          export PATH="$HOME/.local/bin:$HOME/.cursor/bin:$PATH"
+
+          if command -v cursor-agent >/dev/null 2>&1; then
+
+              CLI="cursor-agent"
+
+          elif command -v agent >/dev/null 2>&1; then
+
+              CLI="agent"
+
+          else
+
+              echo "::error::Cursor CLI not found"
+
+              exit 1
+
+          fi
+
+          echo "CLI: $CLI"
+
+          echo "Version:"
+          "$CLI" --version
+
+          echo ""
+          echo "CLI validation:"
+          "$CLI" --help >/dev/null
+
+          echo "Cursor CLI validation successful."
+
+      # -------------------------------------------------------
+      # 6. Generate deployment summary
+      # -------------------------------------------------------
+
+      - name: Deployment summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## Cursor CLI Deployment" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "| Parameter | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "| Target | ${{ matrix.target }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Hostname | $(hostname) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Architecture | $(uname -m) |" >> "$GITHUB_STEP_SUMMARY"
+
+          if command -v cursor-agent >/dev/null 2>&1; then
+
+              VERSION=$(cursor-agent --version 2>/dev/null || echo "Unknown")
+
+              echo "| CLI Version | $VERSION |" >> "$GITHUB_STEP_SUMMARY"
+
+          elif command -v agent >/dev/null 2>&1; then
+
+              VERSION=$(agent --version 2>/dev/null || echo "Unknown")
+
+              echo "| CLI Version | $VERSION |" >> "$GITHUB_STEP_SUMMARY"
+
+          else
+
+              echo "| CLI Version | NOT FOUND |" >> "$GITHUB_STEP_SUMMARY"
+
+          fi
